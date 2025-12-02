@@ -56,3 +56,4 @@ tests/JN/*.json
 tests/JN/*.env
 
 AuthKey_T6FSDYTV6W.p8
+test.py
