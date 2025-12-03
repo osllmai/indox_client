@@ -9,6 +9,10 @@ from .docs import DocsClient
 from .media import MediaClient
 
 
+DEFAULT_DOCS_BASE_URL = "https://dev-docs-api.indox.org"
+DEFAULT_MEDIA_BASE_URL = "https://dev-media-api.indox.org"
+
+
 class IndoxClient:
     """Convenience wrapper that bundles docs + media clients."""
 
@@ -16,12 +20,20 @@ class IndoxClient:
         self,
         *,
         api_key: str,
-        docs_base_url: str,
-        media_base_url: str,
+        docs_base_url: str = DEFAULT_DOCS_BASE_URL,
+        media_base_url: str = DEFAULT_MEDIA_BASE_URL,
         timeout: Optional[tuple[float, float] | float] = None,
     ) -> None:
-        self.docs = DocsClient(base_url=docs_base_url, api_key=api_key, timeout=timeout)
-        self.media = MediaClient(base_url=media_base_url, api_key=api_key, timeout=timeout)
+        docs_url = (docs_base_url or DEFAULT_DOCS_BASE_URL or "").strip().rstrip("/")
+        media_url = (media_base_url or DEFAULT_MEDIA_BASE_URL or "").strip().rstrip("/")
+
+        if not docs_url:
+            raise ValueError("docs_base_url is required")
+        if not media_url:
+            raise ValueError("media_base_url is required")
+
+        self.docs = DocsClient(base_url=docs_url, api_key=api_key, timeout=timeout)
+        self.media = MediaClient(base_url=media_url, api_key=api_key, timeout=timeout)
 
     @classmethod
     def from_env(
@@ -34,15 +46,19 @@ class IndoxClient:
     ) -> "IndoxClient":
         """Instantiate the client using standard environment variables."""
         key = (api_key or os.getenv("INDOX_API_KEY") or "").strip()
-        docs_url = (docs_base_url or os.getenv("INDOX_DOCS_URL") or "").strip()
-        media_url = (media_base_url or os.getenv("INDOX_MEDIA_URL") or "").strip()
+        docs_url = (
+            docs_base_url
+            or os.getenv("INDOX_DOCS_URL")
+            or DEFAULT_DOCS_BASE_URL
+        ).strip()
+        media_url = (
+            media_base_url
+            or os.getenv("INDOX_MEDIA_URL")
+            or DEFAULT_MEDIA_BASE_URL
+        ).strip()
 
         if not key:
             raise ValueError("api_key or INDOX_API_KEY is required")
-        if not docs_url:
-            raise ValueError("docs_base_url or INDOX_DOCS_URL is required")
-        if not media_url:
-            raise ValueError("media_base_url or INDOX_MEDIA_URL is required")
 
         return cls(
             api_key=key,
