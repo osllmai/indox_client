@@ -76,8 +76,8 @@ from indox_client import IndoxClient
 
 client = IndoxClient(
     api_key="ak_live_xxxxxx",
-    docs_base_url="https://dev-docs-api.indox.org",
-    media_base_url="https://dev-media-api.indox.org",
+    docs_base_url="https://indox.org/docs",
+    media_base_url="https://indox.org/media",
 )
 
 # Convert a DOCX file to PDF + HTML with the docs service
@@ -167,8 +167,8 @@ import os
 from indox_client import IndoxClient
 
 client = IndoxClient.from_env(
-    docs_base_url=os.getenv("INDOX_DOCS_URL", "https://dev-docs-api.indox.org"),
-    media_base_url=os.getenv("INDOX_MEDIA_URL", "https://dev-media-api.indox.org"),
+    docs_base_url=os.getenv("INDOX_DOCS_URL", "https://indox.org/docs"),
+    media_base_url=os.getenv("INDOX_MEDIA_URL", "https://indox.org/media"),
 )
 ```
 

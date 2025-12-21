@@ -9,8 +9,8 @@ from .docs import DocsClient
 from .media import MediaClient
 
 
-DEFAULT_DOCS_BASE_URL = "https://dev-docs-api.indox.org"
-DEFAULT_MEDIA_BASE_URL = "https://dev-media-api.indox.org"
+DEFAULT_DOCS_BASE_URL = "https://indox.org/docs"
+DEFAULT_MEDIA_BASE_URL = "https://indox.org/media"
 
 
 class IndoxClient:
