@@ -1,3 +1,4 @@
+LICENSE
 README.md
 pyproject.toml
 src/indox_client/__init__.py
@@ -12,3 +13,4 @@ src/indox_client.egg-info/SOURCES.txt
 src/indox_client.egg-info/dependency_links.txt
 src/indox_client.egg-info/requires.txt
 src/indox_client.egg-info/top_level.txt
+tests/test_client.py

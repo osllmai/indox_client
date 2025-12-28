@@ -1,20 +1,16 @@
-"""
-Public package interface for indox-client.
-"""
+"""Indox Python SDK for media and document conversion services."""
 
-from .client import IndoxClient, DEFAULT_DOCS_BASE_URL, DEFAULT_MEDIA_BASE_URL
+from .version import __version__
+from .exceptions import IndoxClientError, IndoxHTTPError
+from .client import IndoxClient
 from .docs import DocsClient
 from .media import MediaClient
-from .exceptions import IndoxClientError, IndoxHTTPError
-from .version import __version__
 
 __all__ = [
+    "__version__",
     "IndoxClient",
-    "DEFAULT_DOCS_BASE_URL",
-    "DEFAULT_MEDIA_BASE_URL",
     "DocsClient",
     "MediaClient",
     "IndoxClientError",
     "IndoxHTTPError",
-    "__version__",
 ]

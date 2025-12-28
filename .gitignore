@@ -1,59 +1,36 @@
-# Python
+# Byte-compiled
 __pycache__/
 *.py[cod]
-*.pyo
-*.pyd
-.Python
-env/
+*$py.class
+
+# Distribution
+build/
+dist/
+*.egg-info/
+*.egg
+.eggs/
+
+# Virtual environments
 venv/
-ENV/
-env.bak/
-venv.bak/
-.env
-.env.*
+.venv/
+env/
 
-# Django
-*.log
-*.pot
-*.pyc
-db.sqlite3
-media/
-staticfiles/
-static/
-
-# Docker
-*.pid
-*.seed
-*.pid.lock
-docker-compose.override.yml
-
-# VSCode
+# IDE
+.idea/
 .vscode/
+*.swp
+*.swo
 
-# MacOS
-.DS_Store
-
-# Windows
-Thumbs.db
-ehthumbs.db
-Desktop.ini
-
-# Test and coverage
+# Testing
+.pytest_cache/
 .coverage
-coverage.xml
 htmlcov/
-test-results/
+.tox/
+.mypy_cache/
+.ruff_cache/
 
-# Migrations
-**/migrations/*.pyc
-**/migrations/*.pyo
-**/migrations/__pycache__/
-
-# Node
-node_modules/
-
-tests/JN/*.json
-tests/JN/*.env
-
-AuthKey_T6FSDYTV6W.p8
-test.py
+# OS
+.DS_Store
+Thumbs.db
+dist/
+.env

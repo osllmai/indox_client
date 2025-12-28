@@ -1,40 +1,38 @@
 Metadata-Version: 2.4
 Name: indox-client
-Version: 0.1.0
+Version: 0.2.1
 Summary: Python SDK for the Indox media and document conversion services.
 Author-email: Indox <support@indox.org>
-License: Proprietary
-Project-URL: homepage, https://indox.org
-Project-URL: repository, https://github.com/indox-org/indox_client
+License-Expression: LicenseRef-Proprietary
+Project-URL: Homepage, https://indox.org
+Project-URL: Documentation, https://docs.indox.org
+Project-URL: Repository, https://github.com/indox-org/indox_client
+Project-URL: Issues, https://github.com/indox-org/indox_client/issues
+Keywords: indox,document-conversion,media-conversion,sdk,api-client
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
 Classifier: Programming Language :: Python :: 3
 Classifier: Programming Language :: Python :: 3.9
 Classifier: Programming Language :: Python :: 3.10
 Classifier: Programming Language :: Python :: 3.11
-Classifier: License :: Other/Proprietary License
-Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
 Requires-Python: >=3.9
 Description-Content-Type: text/markdown
-Requires-Dist: requests>=2.32.0
+License-File: LICENSE
+Requires-Dist: requests>=2.28.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0; extra == "dev"
+Requires-Dist: responses>=0.23.0; extra == "dev"
+Requires-Dist: ruff>=0.1.0; extra == "dev"
+Requires-Dist: mypy>=1.0; extra == "dev"
+Requires-Dist: types-requests>=2.28; extra == "dev"
+Dynamic: license-file
 
 # indox-client
 
-`indox-client` is a lightweight Python SDK that makes it easy to call the Indox media and
-document conversion microservices. The library wraps the public HTTPS APIs that live in
-the `media` and `docs_indox_data_scaler` projects and automatically sends the API key that
-users generate inside the Indox dashboard.
-
-> **Reminder:** OAuth logins are still handled by `indox-backend`. This package is only a
-> network client – it does not issue tokens.
-
-## Features
-
-- Simple `DocsClient` and `MediaClient` wrappers for `/api/v1/docs/*`, `/api/v1/image/*`,
-  `/api/v1/video/*`, conversion status, and masked download endpoints.
-- Handles `Authorization: Bearer <API key>` headers and propagates retries / timeouts in
-  one place.
-- Works with API keys created through `POST /api/v1/auth/api-keys/` in the backend.
-- Gives you a single `IndoxClient` facade so your app code does not care which hostname
-  serves each service.
+Python SDK for the Indox media and document conversion services.
 
 ## Installation
 
@@ -42,152 +40,118 @@ users generate inside the Indox dashboard.
 pip install indox-client
 ```
 
-The project is pure Python and only depends on `requests`.
-
-## Getting an API key
-
-Every user can mint their own API key via the Indox dashboard or directly through the
-backend REST API:
-
-```
-POST https://dev-api.indox.org/api/v1/auth/api-keys/
-Authorization: Bearer <your normal OIDC access token>
-Content-Type: application/json
-
-{
-  "name": "automation-bot",
-  "permissions": ["read", "write"],
-  "expires_in_days": 30,
-  "rate_limit_per_hour": 500
-}
-```
-
-The plain-text key is returned only once and always starts with `ak_`. Copy it to your
-password manager and feed it into this SDK:
-
-```bash
-export INDOX_API_KEY="ak_live_xxxxxx"
-```
-
-## Quick start
+## Quick Start
 
 ```python
 from indox_client import IndoxClient
 
-client = IndoxClient(
-    api_key="ak_live_xxxxxx",
-    docs_base_url="https://indox.org/docs",
-    media_base_url="https://indox.org/media",
+# Initialize with API key
+client = IndoxClient(api_key="your-api-key")
+
+# Or use environment variables
+# export INDOX_API_KEY=your-api-key
+client = IndoxClient.from_env()
+
+# Convert a document
+result = client.docs.convert_file(
+    file_path="document.pdf",
+    target_formats=["docx", "txt"]
 )
 
-# Convert a DOCX file to PDF + HTML with the docs service
-job = client.docs.convert_file(
-    file_path="proposal.docx",
-    target_formats=["pdf", "html"],
-)
+# Wait for completion
+completed = client.docs.wait_for_completion(result["conversion_id"])
 
-print("Job queued:", job["job_id"])
-
-# Kick off an image conversion
-image_job = client.media.convert_image(
-    file_path="logo.png",
-    target_formats=["webp", "avif"],
+# Download the result
+client.docs.download(
+    conversion_id=result["conversion_id"],
+    output_path="output.docx",
+    fmt="docx"
 )
-print("Image conversion id:", image_job["id"])
 ```
 
-## Docs client highlights
+## Features
+
+- **Document Conversion**: Convert between PDF, DOCX, TXT, and more
+- **Media Conversion**: Convert images and videos between formats
+- **Async Support**: Long-polling for conversion status
+- **Multiple Sources**: Upload files, URLs, or S3 keys
+
+## Usage
+
+### Document Conversion
 
 ```python
-# Discover what inputs/outputs are allowed before converting
+# From local file
+result = client.docs.convert_file(
+    file_path="input.pdf",
+    target_formats=["docx"]
+)
+
+# From URL
+result = client.docs.convert_url(
+    file_url="https://example.com/document.pdf",
+    target_formats=["docx"]
+)
+
+# Check supported formats
 formats = client.docs.supported_conversions()
-print(formats["operations"][0])
-
-# Convert a remote file without uploading
-resp = client.docs.convert_url(
-    file_url="https://example.com/manual.md",
-    target_formats=["pdf"],
-    destination="aws",
-    options={"watermark": {"text": "Draft", "opacity": 0.2}},
-)
-
-# Poll the latest status
-status = client.docs.get_conversion(resp["job_id"])
-
-# Download the final artifact
-client.docs.download(conversion_id=resp["job_id"], output_path="manual.pdf", fmt="PDF")
 ```
 
-Behind the scenes the SDK calls:
-
-- `POST /api/v1/docs/convert/` for multipart uploads
-- `POST /api/v1/docs/convert/json/` when you pass `file_url` or `s3_key`
-- `GET /api/v1/conversion/{id}/` for status
-- `GET /api/v1/docs/{id}/download/` for downloads
-
-## Media client highlights
+### Media Conversion
 
 ```python
-# Inspect available image/video formats and operations once at startup
+# Convert image
+result = client.media.convert_image(
+    file_path="image.png",
+    target_formats=["webp", "jpg"]
+)
+
+# Convert video
+result = client.media.convert_video(
+    file_path="video.mp4",
+    target_formats=["webm"]
+)
+
+# Check supported formats
 image_formats = client.media.image_formats()
 video_formats = client.media.video_formats()
-print("Image formats:", image_formats["supported_outputs"])
-
-# Image conversion
-img = client.media.convert_image("portrait.heic", ["jpeg", "png"], destination="aws")
-
-# Video conversion with a remote URL
-vid = client.media.convert_video(
-    file_url="https://cdn.example.com/sample.mov",
-    target_formats=["mp4"],
-    destination="google_drive",
-    options={"quality": "medium"},
-)
-
-# Status + download
-info = client.media.get_image_conversion(img["id"])
-client.media.download_media(conversion_id=img["id"], output_path="portrait.jpg")
 ```
 
-Endpoints covered:
-
-- `POST /api/v1/image/convert/`
-- `POST /api/v1/video/convert/`
-- `GET /api/v1/image/conversion/{id}/`
-- `GET /api/v1/video/conversion/{id}/`
-- `GET /api/v1/media/{id}/download/`
-
-## Working with environments
-
-Most teams deploy separate hosts for every stage. Pass the correct base URLs when you
-instantiate the client or pick them up from the environment:
+### Context Manager
 
 ```python
-import os
-from indox_client import IndoxClient
-
-client = IndoxClient.from_env(
-    docs_base_url=os.getenv("INDOX_DOCS_URL", "https://indox.org/docs"),
-    media_base_url=os.getenv("INDOX_MEDIA_URL", "https://indox.org/media"),
-)
+with IndoxClient.from_env() as client:
+    result = client.docs.convert_file(
+        file_path="document.pdf",
+        target_formats=["docx"]
+    )
 ```
 
-## Error handling
+## Configuration
 
-All network errors raise a subclass of `IndoxClientError`. HTTP errors expose the
-response body, status code, and request id (if present) so you can log/alert on them.
+| Environment Variable | Description |
+|---------------------|-------------|
+| `INDOX_API_KEY` | Your API key |
+| `INDOX_DOCS_URL` | Docs service URL (default: https://docs.indox.org/) |
+| `INDOX_MEDIA_URL` | Media service URL (default: https://docs.indox.org/) |
+
+## Error Handling
 
 ```python
-from indox_client import IndoxClientError
+from indox_client import IndoxClient, IndoxHTTPError, IndoxClientError
 
 try:
-    client.docs.convert_file("bad.xyz", ["pdf"])
-except IndoxClientError as exc:
-    print(exc.status_code, exc.detail)
+    result = client.docs.convert_file(
+        file_path="document.pdf",
+        target_formats=["docx"]
+    )
+except IndoxHTTPError as e:
+    print(f"HTTP {e.status_code}: {e}")
+    print(f"Request ID: {e.request_id}")
+except IndoxClientError as e:
+    print(f"Client error: {e}")
 ```
 
-## Next steps
+## License
 
-- Add CLI helpers for one-off conversions.
-- Ship async support using `httpx`.
-- Expand coverage for admin-only endpoints (history, visibility, batch collect, etc.).
+Proprietary - see LICENSE for details. 
