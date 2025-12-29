@@ -26,7 +26,6 @@ test_output/
 fonts_output/
 
 # Font files
-*.ttf
 *.otf
 *.woff
 *.woff2
