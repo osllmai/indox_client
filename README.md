@@ -11,115 +11,171 @@ pip install indox-client
 ## Quick Start
 
 ```python
-from indox_client import IndoxClient
+from indox_client import Indox
 
 # Initialize with API key
-client = IndoxClient(api_key="your-api-key")
+client = Indox(api_key="your-api-key")
 
-# Or use environment variables
-# export INDOX_API_KEY=your-api-key
-client = IndoxClient.from_env()
+# Or use environment variable (INDOX_API_KEY)
+client = Indox()
 
-# Convert a document
-result = client.docs.convert_file(
-    file_path="document.pdf",
-    target_formats=["docx", "txt"]
+# Convert a font file (all-in-one)
+path = client.fonts.convert_and_download(
+    "./font.ttf",
+    target_format="woff2",
+    output_path="./font.woff2"
 )
-
-# Wait for completion
-completed = client.docs.wait_for_completion(result["conversion_id"])
-
-# Download the result
-client.docs.download(
-    conversion_id=result["conversion_id"],
-    output_path="output.docx",
-    fmt="docx"
-)
+print(f"Downloaded: {path}")
 ```
 
 ## Features
 
-- **Document Conversion**: Convert between PDF, DOCX, TXT, and more
-- **Media Conversion**: Convert images and videos between formats
-- **Async Support**: Long-polling for conversion status
-- **Multiple Sources**: Upload files, URLs, or S3 keys
+- **Font Conversion**: Convert between TTF, OTF, WOFF, WOFF2, EOT, SVG, and 13+ other formats
+- **Media Conversion**: Convert images and videos (coming soon)
+- **Simple API**: OpenAI-style client pattern
+- **Multiple Input Sources**: Local files, S3 keys
 
-## Usage
+## Font Conversion
 
-### Document Conversion
+### List Supported Formats
 
 ```python
-# From local file
-result = client.docs.convert_file(
-    file_path="input.pdf",
-    target_formats=["docx"]
-)
+from indox_client import Indox
 
-# From URL
-result = client.docs.convert_url(
-    file_url="https://example.com/document.pdf",
-    target_formats=["docx"]
-)
+client = Indox(api_key="your-api-key")
 
-# Check supported formats
-formats = client.docs.supported_conversions()
+# Get all engines and formats
+formats = client.fonts.formats.list()
+print(f"Total formats: {formats['total_formats']}")
+print(f"Engines: {list(formats['engines'].keys())}")
+
+# Get outputs for specific input format
+outputs = client.fonts.formats.get("ttf")
+for out in outputs["outputs"]:
+    print(f"  ttf -> {out['output']} ({out['engine']})")
 ```
 
-### Media Conversion
+### Convert Font File
+
+**Option 1: All-in-one (recommended)**
 
 ```python
-# Convert image
-result = client.media.convert_image(
-    file_path="image.png",
-    target_formats=["webp", "jpg"]
+path = client.fonts.convert_and_download(
+    "./font.ttf",
+    target_format="woff2",
+    output_path="./font.woff2",
+    timeout=60.0
 )
-
-# Convert video
-result = client.media.convert_video(
-    file_path="video.mp4",
-    target_formats=["webm"]
-)
-
-# Check supported formats
-image_formats = client.media.image_formats()
-video_formats = client.media.video_formats()
 ```
 
-### Context Manager
+**Option 2: Step-by-step**
 
 ```python
-with IndoxClient.from_env() as client:
-    result = client.docs.convert_file(
-        file_path="document.pdf",
-        target_formats=["docx"]
+# Upload
+upload = client.fonts.upload("./font.ttf")
+print(f"Uploaded: {upload['s3_key']}")
+
+# Convert
+job = client.fonts.convert(upload["s3_key"], target_format="woff2")
+print(f"Job ID: {job['id']}")
+
+# Wait for completion
+result = client.fonts.conversions.wait(job["id"], timeout=60.0)
+print(f"Status: {result['status']}")
+
+# Download
+path = client.fonts.conversions.download(job["id"], "./font.woff2")
+print(f"Downloaded: {path}")
+```
+
+### Validate Before Converting
+
+```python
+validation = client.fonts.validate("./font.ttf", target_format="woff2")
+
+if validation["valid"]:
+    print(f"Engine: {validation['engine']}")
+    print(f"Credits: {validation['credits']}")
+else:
+    print("Conversion not supported")
+```
+
+## Context Manager
+
+```python
+from indox_client import Indox
+
+with Indox(api_key="your-api-key") as client:
+    path = client.fonts.convert_and_download(
+        "./font.ttf",
+        target_format="woff2",
+        output_path="./font.woff2"
     )
 ```
 
 ## Configuration
 
-| Environment Variable | Description |
-|---------------------|-------------|
-| `INDOX_API_KEY` | Your API key |
-| `INDOX_DOCS_URL` | Docs service URL (default: https://docs.indox.org/) |
-| `INDOX_MEDIA_URL` | Media service URL (default: https://docs.indox.org/) |
+| Environment Variable | Description | Default |
+|---------------------|-------------|---------|
+| `INDOX_API_KEY` | Your API key | Required |
+| `INDOX_BASE_URL` | Base URL | `https://indox.org` |
+
+```python
+# Custom base URL
+client = Indox(
+    api_key="your-api-key",
+    base_url="http://localhost:4800"
+)
+```
 
 ## Error Handling
 
 ```python
-from indox_client import IndoxClient, IndoxHTTPError, IndoxClientError
+from indox_client import (
+    Indox,
+    IndoxError,
+    APIStatusError,
+    AuthenticationError,
+    PaymentRequiredError,
+    NotFoundError,
+    RateLimitError,
+    ConversionError,
+    ConversionTimeoutError,
+)
+
+client = Indox(api_key="your-api-key")
 
 try:
-    result = client.docs.convert_file(
-        file_path="document.pdf",
-        target_formats=["docx"]
+    path = client.fonts.convert_and_download(
+        "./font.ttf",
+        target_format="woff2",
+        output_path="./font.woff2"
     )
-except IndoxHTTPError as e:
-    print(f"HTTP {e.status_code}: {e}")
-    print(f"Request ID: {e.request_id}")
-except IndoxClientError as e:
-    print(f"Client error: {e}")
+except AuthenticationError:
+    print("Invalid API key")
+except PaymentRequiredError:
+    print("Insufficient credits")
+except NotFoundError:
+    print("Endpoint or resource not found")
+except RateLimitError:
+    print("Too many requests")
+except ConversionError as e:
+    print(f"Conversion failed: {e.message}")
+except ConversionTimeoutError:
+    print("Conversion timed out")
+except APIStatusError as e:
+    print(f"API error {e.status_code}: {e.message}")
+except IndoxError as e:
+    print(f"Error: {e.message}")
 ```
+
+## Supported Font Formats
+
+| Engine | Formats |
+|--------|---------|
+| fonttools | ttf, otf, woff, woff2 |
+| fontforge | ttf, otf, woff, woff2, eot, svg, pfa, pfb, ufo, dfont, ttc, bdf, pt3, t42, cff, sfd, fon, fnt, otb |
 
 ## License
 
-Proprietary - see LICENSE for details. 
+Proprietary - see LICENSE for details.

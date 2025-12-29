@@ -32,11 +32,10 @@ from ._exceptions import (
     IndoxError,
     InternalServerError,
     NotFoundError,
-    PaymentRequiredError,
     PermissionDeniedError,
     RateLimitError,
 )
-from ._version import __version__
+from ._version import __version__  # type: ignore
 
 __all__ = [
     "__version__",
@@ -47,7 +46,6 @@ __all__ = [
     "APIStatusError",
     "BadRequestError",
     "AuthenticationError",
-    "PaymentRequiredError",
     "PermissionDeniedError",
     "NotFoundError",
     "RateLimitError",

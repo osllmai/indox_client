@@ -2,23 +2,23 @@
 
 import pytest
 import responses
-from indox_client import IndoxClient, IndoxClientError, IndoxHTTPError
+from indox_client import Indox, IndoxError, APIConnectionError
 
 
-class TestIndoxClient:
-    """Test IndoxClient initialization."""
+class TestIndox:
+    """Test Indox initialization."""
 
     def test_init_requires_api_key(self):
         with pytest.raises(ValueError, match="api_key is required"):
-            IndoxClient(api_key="")
+            Indox(api_key="")
 
     def test_init_with_api_key(self):
-        client = IndoxClient(api_key="test-key")
+        client = Indox(api_key="test-key")
         assert client.docs.api_key == "test-key"
         assert client.media.api_key == "test-key"
 
     def test_context_manager(self):
-        with IndoxClient(api_key="test-key") as client:
+        with Indox(api_key="test-key") as client:
             assert client.docs is not None
             assert client.media is not None
 
@@ -34,7 +34,7 @@ class TestDocsClient:
             json={"formats": ["pdf", "docx"]},
             status=200,
         )
-        client = IndoxClient(api_key="test-key")
+        client = Indox(api_key="test-key")
         result = client.docs.supported_conversions()
         assert result["formats"] == ["pdf", "docx"]
 
@@ -46,7 +46,7 @@ class TestDocsClient:
             json={"conversion_id": "abc123", "status": "pending"},
             status=202,
         )
-        client = IndoxClient(api_key="test-key")
+        client = Indox(api_key="test-key")
         result = client.docs.convert_url(
             file_url="https://example.com/doc.pdf",
             target_formats=["docx"],
@@ -54,13 +54,13 @@ class TestDocsClient:
         assert result["conversion_id"] == "abc123"
 
     def test_convert_url_requires_source(self):
-        client = IndoxClient(api_key="test-key")
-        with pytest.raises(IndoxClientError, match="Provide file_url or s3_key"):
+        client = Indox(api_key="test-key")
+        with pytest.raises(IndoxError, match="Provide file_url or s3_key"):
             client.docs.convert_url(target_formats=["docx"])
 
     def test_convert_url_requires_formats(self):
-        client = IndoxClient(api_key="test-key")
-        with pytest.raises(IndoxClientError, match="target_formats is required"):
+        client = Indox(api_key="test-key")
+        with pytest.raises(IndoxError, match="target_formats is required"):
             client.docs.convert_url(file_url="https://example.com/doc.pdf", target_formats=[])
 
 
@@ -75,7 +75,7 @@ class TestMediaClient:
             json={"formats": ["png", "jpg", "webp"]},
             status=200,
         )
-        client = IndoxClient(api_key="test-key")
+        client = Indox(api_key="test-key")
         result = client.media.image_formats()
         assert "png" in result["formats"]
 
@@ -87,7 +87,7 @@ class TestMediaClient:
             json={"conversion_id": "img123", "status": "pending"},
             status=202,
         )
-        client = IndoxClient(api_key="test-key")
+        client = Indox(api_key="test-key")
         result = client.media.convert_image(
             file_url="https://example.com/image.png",
             target_formats=["webp"],
@@ -106,7 +106,7 @@ class TestHTTPErrors:
             json={"detail": "Unauthorized"},
             status=401,
         )
-        client = IndoxClient(api_key="bad-key")
+        client = Indox(api_key="bad-key")
         with pytest.raises(IndoxHTTPError) as exc_info:
             client.docs.supported_conversions()
         assert exc_info.value.status_code == 401
@@ -120,7 +120,7 @@ class TestHTTPErrors:
             status=404,
             headers={"X-Request-ID": "req-123"},
         )
-        client = IndoxClient(api_key="test-key")
+        client = Indox(api_key="test-key")
         with pytest.raises(IndoxHTTPError) as exc_info:
             client.docs.supported_conversions()
         error_dict = exc_info.value.to_dict()
